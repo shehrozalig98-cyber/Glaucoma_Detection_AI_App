@@ -1,69 +1,34 @@
 import gradio as gr
+import tensorflow as tf
 import numpy as np
 import cv2
-import tensorflow as tf
-import json
+import os
 
 IMG_SIZE = 224
 
-# Load model
-model = tf.keras.models.load_model("model/glaucoma_model.h5")
+MODEL_PATH = os.path.join("model", "glaucoma_model.h5")
+model = tf.keras.models.load_model(MODEL_PATH)
 
-# Load config
-with open("model/config.json", "r") as f:
-    config = json.load(f)
-
-threshold = config["threshold"]
-
-
-def preprocess_image(img):
+def preprocess(img):
+    img = np.array(img)
     img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))
-
-    lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
-    l, a, b = cv2.split(lab)
-
-    clahe = cv2.createCLAHE(
-        clipLimit=2.0,
-        tileGridSize=(8, 8)
-    )
-
-    l = clahe.apply(l)
-
-    lab = cv2.merge((l, a, b))
-    img = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
-
-    red = img[:, :, 0]
-    red = np.stack([red, red, red], axis=-1)
-
-    red = red.astype("float32") / 255.0
-
-    return red
-
+    img = img / 255.0
+    img = np.expand_dims(img, axis=0)
+    return img
 
 def predict(image):
-    img = preprocess_image(image)
-    img = np.expand_dims(img, axis=0)
+    processed = preprocess(image)
+    pred = model.predict(processed)[0][0]
 
-    pred = model.predict(img, verbose=0)[0][0]
-
-    label = (
-        "Glaucoma"
-        if pred >= threshold
-        else "Non-Glaucoma"
-    )
-
+    label = "Glaucoma Detected" if pred > 0.5 else "No Glaucoma"
     return label, float(pred)
 
-
-demo = gr.Interface(
+interface = gr.Interface(
     fn=predict,
     inputs=gr.Image(type="numpy"),
-    outputs=[
-        gr.Textbox(label="Prediction"),
-        gr.Number(label="Confidence Score")
-    ],
-    title="Glaucoma Detection AI System",
-    description="Upload a retinal fundus image to detect glaucoma."
+    outputs=["text", "number"],
+    title="Glaucoma Detection AI",
+    description="Upload an eye image for glaucoma prediction"
 )
 
-demo.launch()
+interface.launch()
