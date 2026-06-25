@@ -1,4 +1,4 @@
-# Glaucoma Detection AI Web Application
+# Glaucoma Detection AI APP
 
 ## Overview
 
