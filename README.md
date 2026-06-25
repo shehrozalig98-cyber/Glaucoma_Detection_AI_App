@@ -1,4 +1,3 @@
-# Glaucoma_Detection_AI_App
 # Glaucoma Detection AI Web Application
 
 ## Overview
